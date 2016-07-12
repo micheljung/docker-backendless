@@ -1,26 +1,28 @@
-FROM ubuntu:14.04
+FROM debian:jessie
 MAINTAINER michel@micheljung.ch
 
 RUN apt-get update && \
     apt-get install -y \
-        wget
+        wget 
 
-ENV FIRST_NAME=
-ENV LAST_NAME=
-ENV EMAIL_ADDRESS=
-ENV PASSWORD 1234
-ENV SMTP_USERNAME test
-ENV SMTP_PASSWORD 1234
-ENV SMTP_HOST smtp.example.com
-ENV SMTP_PORT=
-ENV SMTP_CONNECTION=
-ENV APP_NAME=
-ENV HOST_NAME=
+ARG FIRST_NAME=
+ARG LAST_NAME=
+ARG EMAIL_ADDRESS=
+ARG PASSWORD=1234
+ARG SMTP_USERNAME=test
+ARG SMTP_PASSWORD=1234
+ARG SMTP_HOST=smtp.example.com
+ARG SMTP_PORT=
+ARG SMTP_CONNECTION=
+ARG APP_NAME=
+ARG HOST_NAME=
+
+RUN if [ -z "${HOST_NAME}" ]; then echo >&2 'error: You need to specify --build-arg HOST_NAME='; exit 1; fi
         
-RUN wget https://downloads.bitnami.com/files/stacks/backendless/3.0.0-24/backendless-3.0.0-24-linux-x64-installer.run
+RUN wget https://downloads.bitnami.com/files/stacks/backendless/3.0.0-24/backendless-3.0.0-24-linux-x64-installer.run -O installer.run
 
-RUN chmod +x backendless-3.0.0-24-linux-x64-installer.run
-RUN echo "\n\
+RUN chmod +x installer.run
+RUN echo "/opt/backendless\n\
 ${FIRST_NAME}\n\
 ${LAST_NAME}\n\
 ${EMAIL_ADDRESS}\n\
@@ -36,7 +38,15 @@ ${SMTP_PORT}\n\
 ${SMTP_CONNECTION}\n\
 ${APP_NAME}\n\
 ${HOST_NAME}\n\
-y\n" | ./backendless-3.0.0-24-linux-x64-installer.run
+y\n\
+n\n" | ./installer.run
 
-EXPOSE 8080
-CMD ["wait", "$!"]
+VOLUME /opt/backendless
+
+RUN rm installer.run
+
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN ln -s usr/local/bin/docker-entrypoint.sh /entrypoint.sh # backwards compat
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+EXPOSE 80
